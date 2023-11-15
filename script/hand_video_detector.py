@@ -95,7 +95,7 @@ def hand_video(flag, frame):
         mp_drawing.draw_landmarks(
             annotated_image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
     # flip it back and return
-    # return cv2.flip(annotated_image, 1)
+    return cv2.flip(annotated_image, 1)
 
 # save the video if user chooese so
 def vid_save():
