@@ -1,5 +1,7 @@
 import math
 import os
+import numpy as np
+import vlc
 
 import cv2
 import mediapipe as mp
@@ -125,10 +127,8 @@ def vid_save():
     cv2.destroyAllWindows()
     # return cv2.flip(frame, 1)
 
-def pose_video():
-    pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, model_complexity=2)
-    video = cv2.VideoCapture('mov_data/IMG_9668.MOV')
-    # init variables
+def pose_video(flag, frame):
+
     walk_count = 0
     frame_no = 0
     left_ankle_forward = False
@@ -136,51 +136,46 @@ def pose_video():
     walk_sequences = {}
     walk_count_list = []
 
-    while video.isOpened():
+    pose = mp_pose.Pose(static_image_mode=False,
+                        min_detection_confidence=0.5,
+                        model_complexity=2)
+    # flip it along y axis
+    image = cv2.flip(frame, 1)
 
-        ok, frame = video.read()
+    frame_no = frame_no + 1
+    # color format conversion
+    frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = pose.process(frameRGB)
 
-        if not ok:
-            continue
+    if results.pose_landmarks is None:
+        pose.close()
+        return frame
 
-        # # Flip the frame horizontally for natural (selfie-view) visualization.
-        # frame = cv2.flip(frame, 1)
+    image_hight, image_width, _ = image.shape
 
-        frame_no = frame_no + 1
-        output_frame = frame.copy()
-        frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # frameRGB.flags.writeable = False  # to improve performance
+    annotated_image = image.copy()
 
-        # TODO : 디자인 처리된 이미지로 대체될 예정
-        output_frame = display_monitoring_box(output_frame)
+    # TODO : 디자인 처리된 이미지로 대체될 예정
+    annotated_image = display_monitoring_box(annotated_image)
 
-        # TODO : 실제 landmark data와 연동 예정
-        output_frame = display_body_status(output_frame)
+    # TODO : 실제 landmark data와 연동 예정
+    annotated_image = display_body_status(annotated_image)
 
-        # ---
-        detection_results = pose.process(frameRGB)
-
-        frame_height, frame_width, _ = frame.shape
-
-        if detection_results.pose_landmarks is None:
-            continue
-
-        # for testing
-        # display_all_body_angle(detection_results, frame)
-
-        lm = detection_results.pose_landmarks.landmark
+    # draw result landmarks
+    for pose_landmarks in results.pose_landmarks:
+        lm = annotated_image.pose_landmarks.landmark
         plm = mp_pose.PoseLandmark
 
-        left_hip = get_body_coord(plm.LEFT_HIP, frame_height, frame_width, lm, plm)
-        left_knee = get_body_coord(plm.LEFT_KNEE, frame_height, frame_width, lm, plm)
-        left_ankle = get_body_coord(plm.LEFT_ANKLE, frame_height, frame_width, lm, plm)
+        left_hip = get_body_coord(plm.LEFT_HIP, image_hight, image_width, lm, plm)
+        left_knee = get_body_coord(plm.LEFT_KNEE, image_hight, image_width, lm, plm)
+        left_ankle = get_body_coord(plm.LEFT_ANKLE, image_hight, image_width, lm, plm)
 
-        right_hip = get_body_coord(plm.RIGHT_HIP, frame_height, frame_width, lm, plm)
-        right_knee = get_body_coord(plm.RIGHT_KNEE, frame_height, frame_width, lm, plm)
-        right_ankle = get_body_coord(plm.RIGHT_ANKLE, frame_height, frame_width, lm, plm)
+        right_hip = get_body_coord(plm.RIGHT_HIP, image_hight, image_width, lm, plm)
+        right_knee = get_body_coord(plm.RIGHT_KNEE, image_hight, image_width, lm, plm)
+        right_ankle = get_body_coord(plm.RIGHT_ANKLE, image_hight, image_width, lm, plm)
 
-        right_heel = get_body_coord(plm.RIGHT_HEEL, frame_height, frame_width, lm, plm)
-        right_foot_index = get_body_coord(plm.RIGHT_FOOT_INDEX, frame_height, frame_width, lm, plm)
+        right_heel = get_body_coord(plm.RIGHT_HEEL, image_hight, image_width, lm, plm)
+        right_foot_index = get_body_coord(plm.RIGHT_FOOT_INDEX, image_hight, image_width, lm, plm)
 
         # for testing
         draw_interested_point(left_ankle, left_hip, left_knee, output_frame, right_ankle, right_hip, right_knee)
@@ -208,25 +203,11 @@ def pose_video():
             continue
 
         # walk_sequences에 4회 보행 데이터가 쌓이면 평균 각도 계산하여 보행 feedback
-        walk_count_list = check_mission(detection_results, frame, walk_count, walk_count_list, walk_sequences)
+        walk_count_list = check_mission(annotated_image, frame, walk_count, walk_count_list, walk_sequences)
 
-        draw_landmarks(detection_results, mp_drawing, mp_pose, output_frame)
-
-        cv2.imshow('Twentydot EZMO ', output_frame)
-        # cv2.waitKey()
-
-        # stop this program when ESC pressed
-        k = cv2.waitKey(1) & 0xFF  # Retreive the ASCII code of the key pressed
-        if k == 27:  # ESC
-            break
-
-        print(f'last frame no = {frame_no}')
-
-        # Release the VideoCapture object and close the windows.
-        video.release()
-        cv2.destroyAllWindows()
-
-        cv2.flip(output_frame, 1)
+        draw_landmarks(annotated_image, mp_drawing, mp_pose, output_frame)
+    # flip it back and return
+    return cv2.flip(annotated_image, 1)
 
 def display_monitoring_box(output_frame):
     # background 이미지

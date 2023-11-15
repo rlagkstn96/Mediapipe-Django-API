@@ -15,8 +15,8 @@ class VideoCamera(object):
 		success, image = self.video.read()
 		if success:
 			# call the detection here
-			# image = pose_video()
-			image = hand_video(success,image)
+			image = pose_video(success,image)
+			# image = hand_video(success,image)
 			# vid_save()
 
 		return image
