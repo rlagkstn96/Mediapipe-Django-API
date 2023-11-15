@@ -95,7 +95,7 @@ def hand_video(flag, frame):
         mp_drawing.draw_landmarks(
             annotated_image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
     # flip it back and return
-    return cv2.flip(annotated_image, 1)
+    # return cv2.flip(annotated_image, 1)
 
 # save the video if user chooese so
 def vid_save():
@@ -123,6 +123,7 @@ def vid_save():
     cap.release()
     out.release()
     cv2.destroyAllWindows()
+    # return cv2.flip(frame, 1)
 
 def pose_video():
     pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, model_complexity=2)
