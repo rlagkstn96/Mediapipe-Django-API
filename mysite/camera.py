@@ -1,5 +1,5 @@
 import cv2
-from script.hand_video_detector import hand_video
+from script.hand_video_detector import hand_video, pose_video
 import time
 
 # basically take camera input and convert it into a cv object
@@ -15,7 +15,7 @@ class VideoCamera(object):
 		success, image = self.video.read()
 		if success:
 			# call the detection here
-			image = hand_video(success, image)
+			image = pose_video()
 
 		return image
 
